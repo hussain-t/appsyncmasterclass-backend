@@ -1,14 +1,14 @@
-require('dotenv').config()
-const AWS = require('aws-sdk')
+require("dotenv").config();
+const AWS = require("aws-sdk");
 const fs = require('fs')
 const velocityMapper = require('amplify-appsync-simulator/lib/velocity/value-mapper/mapper')
 const velocityTemplate = require('amplify-velocity-template')
-const GraphQL = require('../lib/graphql')
+const GraphQL = require("../lib/graphql");
 
 const we_invoke_confirmUserSignup = async (username, name, email) => {
-  const handler = require('../../functions/confirm-user-signup').handler
+  const handler = require("../../functions/confirm-user-signup").handler;
 
-  const context = {}
+  const context = {};
   const event = {
     "version": "1",
     "region": process.env.AWS_REGION,
@@ -28,38 +28,39 @@ const we_invoke_confirmUserSignup = async (username, name, email) => {
     "response": {}
   }
 
-  await handler(event, context)
-}
+  await handler(event, context);
+};
 
 const a_user_signs_up = async (password, name, email) => {
   const cognito = new AWS.CognitoIdentityServiceProvider()
 
-  const userPoolId = process.env.COGNITO_USER_POOL_ID
-  const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.WEB_COGNITO_USER_POOL_CLIENT_ID;
 
-  const signUpResp = await cognito.signUp({
+  const signUpRes = await cognito.signUp({
     ClientId: clientId,
     Username: email,
     Password: password,
     UserAttributes: [
-      { Name: 'name', Value: name }
+      { Name: "name", Value: name },
     ]
-  }).promise()
+  }).promise();
 
-  const username = signUpResp.UserSub
-  console.log(`[${email}] - user has signed up [${username}]`)
+  const username = signUpRes.UserSub;
+  console.log(`[${email}] - user has signed up as [${username}]`);
 
+  // This allows us to skip the verification code
   await cognito.adminConfirmSignUp({
     UserPoolId: userPoolId,
-    Username: username
-  }).promise()
+    Username: username,
+  }).promise();
 
-  console.log(`[${email}] - confirmed sign up`)
+  console.log(`[${email}] - confirmed sign up`);
 
   return {
     username,
+    email,
     name,
-    email
   }
 }
 
@@ -70,7 +71,7 @@ const we_invoke_an_appsync_template = (templatePath, context) => {
     valueMapper: velocityMapper.map,
     escape: false
   })
-  return JSON.parse(compiler.render(context))
+  return JSON.parse(compiler.render(context));
 }
 
 const a_user_calls_getMyProfile = async (user) => {
@@ -91,19 +92,20 @@ const a_user_calls_getMyProfile = async (user) => {
       tweetsCount
       website
     }
-  }`
+  }`;
 
+  console.log("user...inside...", user);
   const data = await GraphQL(process.env.API_URL, getMyProfile, {}, user.accessToken)
-  const profile = data.getMyProfile
+  console.log("DATA...DATA...", data);
+  const profile = data.getMyProfile;
 
   console.log(`[${user.username}] - fetched profile`)
-
-  return profile
+  return profile;
 }
 
 module.exports = {
   we_invoke_confirmUserSignup,
   a_user_signs_up,
   we_invoke_an_appsync_template,
-  a_user_calls_getMyProfile
+  a_user_calls_getMyProfile,
 }
